@@ -23,14 +23,61 @@ defmodule MsFs.Session do
     {:reply, {:ok, id}, Map.put_new(sessions, id, %__MODULE__{})}
   end
 
+  def handle_call({:close_session, id}, _from, sessions) do
+    sessions
+    |> Map.pop(id)
+    |> case do
+      {nil, sessions} -> {:reply, {:error, :invalid_session}, sessions}
+      {_id, sessions} -> {:reply, :ok, sessions}
+    end
+  end
+
+  def handle_call({:current_working_directory, id}, _from, sessions) do
+    sessions
+    |> Map.get(id)
+    |> case do
+      nil -> {:reply, {:error, :invalid_session}, sessions}
+      session -> {:reply, {:ok, session.current_working_directory}, sessions}
+    end
+  end
+
   @doc """
   Open a file system session.
 
   ## Examples
-      iex> {:ok, session} = MsFs.Session.open()
-      {:ok, session}
+    iex> {:ok, session} = Session.open()
+    {:ok, session}
   """
   def open do
     GenServer.call(__MODULE__, {:new_session})
+  end
+
+  @doc """
+  Close a file system session.
+
+  ## Examples
+    iex> {:ok, session} = Session.open()
+    {:ok, session}
+    iex> Session.close(session)
+    :ok
+
+
+  """
+  def close(session) do
+    GenServer.call(__MODULE__, {:close_session, session})
+  end
+
+  @doc """
+  Get the current working directory for a session.
+
+  ## Examples
+    iex> {:ok, session} = Session.open()
+    {:ok, session}
+    iex> Session.current_working_directory(session)
+    {:ok, "/"}
+
+  """
+  def current_working_directory(session) do
+    GenServer.call(__MODULE__, {:current_working_directory, session})
   end
 end
