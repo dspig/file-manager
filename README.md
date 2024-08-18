@@ -54,3 +54,5 @@ iex -S mix
 ## Testing
 
 Tests can be run with the command `mix test`.
+
+Note: Many of the tests are [doctests](https://hexdocs.pm/elixir/main/docs-tests-and-with.html#doctests) and double as inline documentation.

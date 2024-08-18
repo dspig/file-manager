@@ -10,6 +10,7 @@ defmodule MsFs.Application do
     children = [
       # Starts a worker by calling: MsFs.Worker.start_link(arg)
       # {MsFs.Worker, arg}
+      {MsFs.Session, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
