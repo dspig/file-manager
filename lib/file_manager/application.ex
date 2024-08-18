@@ -10,6 +10,7 @@ defmodule FileManager.Application do
     children = [
       # Starts a worker by calling: FileManager.Worker.start_link(arg)
       # {FileManager.Worker, arg}
+      {FileManager.Storage, []},
       {FileManager.Session, []}
     ]
 

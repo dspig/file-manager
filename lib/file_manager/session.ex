@@ -6,6 +6,8 @@ defmodule FileManager.Session do
   """
   use GenServer
 
+  alias FileManager.Storage
+
   defstruct current_working_directory: "/"
 
   def start_link(state) do
@@ -43,19 +45,14 @@ defmodule FileManager.Session do
   end
 
   def handle_call({:change_directory, id, path}, _from, sessions) do
-    sessions
-    |> get_session(id)
-    |> case do
-      {:ok, %__MODULE__{} = session} ->
-        new_session = %{
-          session
-          | current_working_directory: build_cwd(session.current_working_directory, path)
-        }
+    with {:ok, session} <- get_session(sessions, id),
+         cwd = build_cwd(session.current_working_directory, path),
+         :ok <- Storage.exists?(cwd) do
+      new_session = %{session | current_working_directory: cwd}
 
-        {:reply, {:ok, new_session.current_working_directory}, Map.put(sessions, id, new_session)}
-
-      {:error, _} = result ->
-        {:reply, result, sessions}
+      {:reply, {:ok, new_session.current_working_directory}, Map.put(sessions, id, new_session)}
+    else
+      {:error, _} = error -> {:reply, error, sessions}
     end
   end
 
