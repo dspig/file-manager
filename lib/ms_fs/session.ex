@@ -13,9 +13,7 @@ defmodule MsFs.Session do
   end
 
   @impl GenServer
-  def init(_) do
-    {:ok, %{}}
-  end
+  def init(_), do: {:ok, %{}}
 
   @impl GenServer
   def handle_call({:new_session}, _from, sessions) do
@@ -34,11 +32,48 @@ defmodule MsFs.Session do
 
   def handle_call({:current_working_directory, id}, _from, sessions) do
     sessions
+    |> get_session(id)
+    |> case do
+      {:ok, %__MODULE__{} = session} ->
+        {:reply, {:ok, session.current_working_directory}, sessions}
+
+      {:error, _} = result ->
+        {:reply, result, sessions}
+    end
+  end
+
+  def handle_call({:change_directory, id, path}, _from, sessions) do
+    sessions
+    |> get_session(id)
+    |> case do
+      {:ok, %__MODULE__{} = session} ->
+        new_session = %{
+          session
+          | current_working_directory: build_cwd(session.current_working_directory, path)
+        }
+
+        {:reply, {:ok, new_session.current_working_directory}, Map.put(sessions, id, new_session)}
+
+      {:error, _} = result ->
+        {:reply, result, sessions}
+    end
+  end
+
+  defp get_session(sessions, id) do
+    sessions
     |> Map.get(id)
     |> case do
-      nil -> {:reply, {:error, :invalid_session}, sessions}
-      session -> {:reply, {:ok, session.current_working_directory}, sessions}
+      nil -> {:error, :invalid_session}
+      %__MODULE{} = session -> {:ok, session}
     end
+  end
+
+  defp build_cwd(_current_cwd, "/" <> _ = new_cwd), do: new_cwd
+
+  defp build_cwd(current_cwd, new_cwd) do
+    current_cwd
+    |> Path.join(new_cwd)
+    |> Path.expand()
   end
 
   @doc """
@@ -68,7 +103,7 @@ defmodule MsFs.Session do
   end
 
   @doc """
-  Get the current working directory for a session.
+  Get the session's current working directory
 
   ## Examples
     iex> {:ok, session} = Session.open()
@@ -79,5 +114,12 @@ defmodule MsFs.Session do
   """
   def current_working_directory(session) do
     GenServer.call(__MODULE__, {:current_working_directory, session})
+  end
+
+  @doc """
+  Change the session's current working directory
+  """
+  def change_directory(session, path) do
+    GenServer.call(__MODULE__, {:change_directory, session, path})
   end
 end
