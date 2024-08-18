@@ -1,6 +1,6 @@
-defmodule MsFs.SessionTest do
+defmodule FileManager.SessionTest do
   use ExUnit.Case
-  alias MsFs.Session
+  alias FileManager.Session
   doctest Session
 
   describe "close/1" do

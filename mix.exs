@@ -1,4 +1,4 @@
-defmodule MsFs.MixProject do
+defmodule FileManager.MixProject do
   use Mix.Project
 
   def project do
@@ -15,7 +15,7 @@ defmodule MsFs.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {MsFs.Application, []}
+      mod: {FileManager.Application, []}
     ]
   end
 

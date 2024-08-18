@@ -1,4 +1,4 @@
-# MsFs
+# FileManager
 
 An in-memory file system implementation to satisfy a takehome coding exercise.
 

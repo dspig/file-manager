@@ -1,7 +1,7 @@
-defmodule MsFs.Console do
+defmodule FileManager.Console do
   defmacro __using__(_) do
     quote do
-      import MsFs.Session
+      import FileManager.Session
     end
   end
 end

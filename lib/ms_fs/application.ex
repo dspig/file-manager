@@ -1,4 +1,4 @@
-defmodule MsFs.Application do
+defmodule FileManager.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,14 +8,14 @@ defmodule MsFs.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: MsFs.Worker.start_link(arg)
-      # {MsFs.Worker, arg}
-      {MsFs.Session, []}
+      # Starts a worker by calling: FileManager.Worker.start_link(arg)
+      # {FileManager.Worker, arg}
+      {FileManager.Session, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: MsFs.Supervisor]
+    opts = [strategy: :one_for_one, name: FileManager.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

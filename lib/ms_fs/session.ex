@@ -1,4 +1,4 @@
-defmodule MsFs.Session do
+defmodule FileManager.Session do
   @moduledoc """
   This modules is responsible for managing file system sessions. To interact
   with the file system, callers need to first open a session. The session
