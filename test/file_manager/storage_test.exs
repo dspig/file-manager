@@ -1,5 +1,8 @@
 defmodule FileManager.StorageTest do
-  use ExUnit.Case
+  # Note: async: false because the Storage service doesn't support asynchronous
+  # test access.
+  use FileManager.Test.Case.App, async: false
+
   alias FileManager.Storage
   doctest Storage
 end

@@ -3,9 +3,10 @@ defmodule FileManager.MixProject do
 
   def project do
     [
-      app: :ms_fs,
+      app: :file_manager,
       version: "0.1.0",
       elixir: "~> 1.15",
+      elixirc_paths: paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -18,6 +19,9 @@ defmodule FileManager.MixProject do
       mod: {FileManager.Application, []}
     ]
   end
+
+  defp paths(:test), do: ["lib", "test/support"]
+  defp paths(_), do: ["lib"]
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do

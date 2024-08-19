@@ -1,6 +1,10 @@
 defmodule FileManager.SessionTest do
-  use ExUnit.Case
+  # Note: async: false because the Storage service doesn't support asynchronous
+  # test access.
+  use FileManager.Test.Case.App, async: false
+
   alias FileManager.Session
+  alias FileManager.Storage
   doctest Session
 
   describe "close/1" do
@@ -26,17 +30,24 @@ defmodule FileManager.SessionTest do
     end
 
     test "relative path", %{session: session} do
-      # assert {:ok, "/foo"} = Session.change_directory(session, "foo")
-      # assert {:ok, "/foo/bar"} = Session.change_directory(session, "bar")
+      :ok = Storage.make_directory("/foo/bar")
+
+      assert {:ok, "/foo"} = Session.change_directory(session, "foo")
+      assert {:ok, "/foo/bar"} = Session.change_directory(session, "bar")
     end
 
     test "absolute path", %{session: session} do
-      # assert {:ok, "/foo"} = Session.change_directory(session, "/foo")
-      # assert {:ok, "/bar"} = Session.change_directory(session, "/bar")
+      :ok = Storage.make_directory("/foo/bar")
+      :ok = Storage.make_directory("/bar")
+
+      assert {:ok, "/foo"} = Session.change_directory(session, "/foo")
+      assert {:ok, "/bar"} = Session.change_directory(session, "/bar")
     end
 
     test "parent directory", %{session: session} do
-      # assert {:ok, "/foo"} = Session.change_directory(session, "foo/bar/..")
+      :ok = Storage.make_directory("/foo/bar")
+
+      assert {:ok, "/foo"} = Session.change_directory(session, "foo/bar/..")
       assert {:ok, "/"} = Session.change_directory(session, "..")
 
       assert {:ok, "/"} = Session.change_directory(session, ".."),
@@ -44,9 +55,15 @@ defmodule FileManager.SessionTest do
     end
 
     test "current directory", %{session: session} do
-      # assert {:ok, "/foo"} = Session.change_directory(session, "foo/./")
-      # assert {:ok, "/foo"} = Session.change_directory(session, "./")
-      # assert {:ok, "/foo"} = Session.change_directory(session, ".")
+      :ok = Storage.make_directory("/foo/bar")
+
+      assert {:ok, "/foo"} = Session.change_directory(session, "foo/./")
+      assert {:ok, "/foo"} = Session.change_directory(session, "./")
+      assert {:ok, "/foo"} = Session.change_directory(session, ".")
+    end
+
+    test "invalid session" do
+      assert {:error, :invalid_session} = Session.change_directory(make_ref(), "/foo/bar")
     end
   end
 end
