@@ -56,7 +56,7 @@ defmodule FileManager do
   ## Examples
 
     iex> {:ok, session} = FileManager.open_session()
-    iex> FileManager.make_directory(session, "foo/bar/baz")
+    iex> FileManager.make_directory(session, "/foo/bar/baz")
     :ok
     iex> FileManager.make_directory(session, "/foo")
     {:error, :already_exists}
@@ -70,6 +70,19 @@ defmodule FileManager do
     end
   end
 
+  @doc """
+  Change the current working directory of the session.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.make_directory(session, "/foo/bar/baz")
+    :ok
+    iex> FileManager.change_directory(session, "./foo/bar")
+    {:ok, "/foo/bar"}
+    iex> FileManager.change_directory(session, "./bix")
+    {:error, :invalid_path}
+
+  """
   def change_directory(session, path) do
     with {:ok, cwd} <- current_working_directory(session) do
       new_cwd = Path.expand(path, cwd)
