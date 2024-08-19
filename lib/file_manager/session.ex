@@ -74,11 +74,8 @@ defmodule FileManager.Session do
   end
 
   @doc """
-  Open a file system session.
-
-  ## Examples
-    iex> {:ok, session} = Session.open()
-    {:ok, session}
+  Returns a file system session struct that can be used to interact with other
+  file manager functions.
   """
   def open do
     GenServer.call(__MODULE__, {:new_session})
@@ -86,14 +83,6 @@ defmodule FileManager.Session do
 
   @doc """
   Close a file system session.
-
-  ## Examples
-    iex> {:ok, session} = Session.open()
-    {:ok, session}
-    iex> Session.close(session)
-    :ok
-
-
   """
   def close(session) do
     GenServer.call(__MODULE__, {:close_session, session})
@@ -101,13 +90,6 @@ defmodule FileManager.Session do
 
   @doc """
   Get the session's current working directory
-
-  ## Examples
-    iex> {:ok, session} = Session.open()
-    {:ok, session}
-    iex> Session.current_working_directory(session)
-    {:ok, "/"}
-
   """
   def current_working_directory(session) do
     GenServer.call(__MODULE__, {:current_working_directory, session})

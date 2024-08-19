@@ -103,15 +103,6 @@ defmodule FileManager.Storage do
 
   @doc """
   Creates a directory at the given path.
-
-  ## Examples
-
-      iex> Storage.make_directory("/foo")
-      :ok
-      iex> Storage.make_directory("/foo/bar/baz")
-      :ok
-      iex> Storage.make_directory("/foo")
-      {:error, :already_exists}
   """
   def make_directory(path), do: GenServer.call(__MODULE__, {:make_directory, path})
 
