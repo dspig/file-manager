@@ -19,4 +19,20 @@ defmodule FileManager.StorageTest do
       assert Enum.sort(contents) == ["bar", "baz"]
     end
   end
+
+  describe "delete_directory/" do
+    test "non-empty directory" do
+      :ok = Storage.make_directory("/foo/bar")
+
+      assert :ok = Storage.delete_directory("/foo")
+    end
+
+    test "non-existent directory" do
+      assert {:error, :invalid_path} = Storage.delete_directory("/foo")
+    end
+
+    test "root directory" do
+      assert {:error, :invalid_path} = Storage.delete_directory("/")
+    end
+  end
 end

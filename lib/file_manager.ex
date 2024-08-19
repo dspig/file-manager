@@ -84,9 +84,39 @@ defmodule FileManager do
 
   """
   def change_directory(session, path) do
+    with {:ok, path} <- expand_path(session, path) do
+      Session.change_directory(session, path)
+    end
+  end
+
+  @doc """
+  Delete a directory with the given path, including nested directories and
+  files. An error is thrown if the target directory is a parent of the current
+  working directory.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.make_directory(session, "/foo/bar/baz")
+    :ok
+    iex> FileManager.delete_directory(session, "/foo")
+    :ok
+    iex> FileManager.list_directory(session)
+    {:ok, []}
+  """
+  def delete_directory(session, path) do
+    with {:ok, cwd} <- current_working_directory(session),
+         {:ok, path} <- expand_path(session, path) do
+      if String.starts_with?(cwd, path) do
+        {:error, :invalid_path}
+      else
+        Storage.delete_directory(path)
+      end
+    end
+  end
+
+  defp expand_path(session, path) do
     with {:ok, cwd} <- current_working_directory(session) do
-      new_cwd = Path.expand(path, cwd)
-      Session.change_directory(session, new_cwd)
+      {:ok, Path.expand(path, cwd)}
     end
   end
 end

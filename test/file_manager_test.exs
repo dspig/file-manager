@@ -61,22 +61,75 @@ defmodule FileManagerTest do
     end
   end
 
-  test "make_directory/2", %{session: session} do
-    assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
-    assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
+  describe "make_directory/2" do
+    test "nested directories", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
+    end
+
+    test "already exists", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo/bar/baz")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo/bar")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo")
+    end
   end
 
-  test "list_directory/2", %{session: session} do
-    assert {:ok, []} = FileManager.list_directory(session, "/")
-    assert {:ok, []} = FileManager.list_directory(session)
+  describe "list_directory/2" do
+    test "list contents", %{session: session} do
+      assert {:ok, []} = FileManager.list_directory(session, "/")
 
-    assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert :ok = FileManager.make_directory(session, "/foo")
+      assert :ok = FileManager.make_directory(session, "/bar")
+      assert {:ok, contents} = FileManager.list_directory(session, "/")
+      assert Enum.sort(contents) == ["bar", "foo"]
+    end
 
-    assert {:ok, ["foo"]} = FileManager.list_directory(session, "/")
-    assert {:ok, ["foo"]} = FileManager.list_directory(session), "default path is cwd"
+    test "absolute paths", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
 
-    assert {:ok, ["bar"]} = FileManager.list_directory(session, "/foo")
-    assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
-    assert {:ok, []} = FileManager.list_directory(session, "/foo/bar/baz")
+      assert {:ok, ["foo"]} = FileManager.list_directory(session, "/")
+      assert {:ok, ["bar"]} = FileManager.list_directory(session, "/foo")
+      assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
+      assert {:ok, []} = FileManager.list_directory(session, "/foo/bar/baz")
+    end
+
+    test "current working directory", %{session: session} do
+      assert {:ok, []} = FileManager.list_directory(session)
+
+      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert {:ok, ["foo"]} = FileManager.list_directory(session)
+
+      assert {:ok, _cwd} = FileManager.change_directory(session, "foo")
+      assert {:ok, ["bar"]} = FileManager.list_directory(session)
+    end
+
+    test "non-existent directory", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.list_directory(session, "/foo")
+    end
+  end
+
+  describe "delete_directory/2" do
+    test "deleting root", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/")
+    end
+
+    test "deleting current working directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/foo")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/foo")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, ".")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "..")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "../foo")
+    end
+
+    test "deleting parent of current working directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/foo/bar/baz")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/foo/bar")
+    end
+
+    test "deleting a non-existent directory", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/foo")
+    end
   end
 end
