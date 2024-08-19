@@ -56,3 +56,14 @@ iex -S mix
 Tests can be run with the command `mix test`.
 
 Note: Many of the tests are [doctests](https://hexdocs.pm/elixir/main/docs-tests-and-with.html#doctests) and double as inline documentation.
+
+## Caveats, etc.
+
+There are features I wasn't able to implement or shortcuts I took in my
+implementation. The following are some explanations.
+
+- **Non-async tests** The `Storage` GenServer is a singleton, making it
+  difficult to have different test files run asynchronously. I took the shortcut
+  of making all tests synchronous. Given more time, I would probably try to
+  implement something similar to Ecto sandboxes, enabling each test to run
+  independently from other tests.
