@@ -19,4 +19,11 @@ defmodule FileManagerTest do
   test "list_directory/2", %{session: session} do
     assert {:ok, []} = FileManager.list_directory(session, "/")
   end
+
+  test "make_directory/2", %{session: session} do
+    assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+    assert {:ok, ["foo"]} = FileManager.list_directory(session, "/")
+    assert {:ok, ["bar"]} = FileManager.list_directory(session, "/foo")
+    assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
+  end
 end

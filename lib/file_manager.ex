@@ -18,4 +18,12 @@ defmodule FileManager do
       |> Storage.list_directory()
     end
   end
+
+  def make_directory(session, path) do
+    with {:ok, cwd} <- current_working_directory(session) do
+      path
+      |> Path.expand(cwd)
+      |> Storage.make_directory()
+    end
+  end
 end
