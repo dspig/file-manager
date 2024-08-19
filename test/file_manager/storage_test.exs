@@ -11,7 +11,7 @@ defmodule FileManager.StorageTest do
       assert {:ok, []} = Storage.list_directory("/")
     end
 
-    test "lists contents" do
+    test "multiple entries" do
       :ok = Storage.make_directory("/foo/bar")
       :ok = Storage.make_directory("/foo/baz")
 

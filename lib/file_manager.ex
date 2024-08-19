@@ -5,6 +5,17 @@ defmodule FileManager do
   such as the current working directory and permissions.
   """
 
-  defdelegate open_session, to: __MODULE__.Session, as: :open
-  defdelegate current_working_directory(session), to: __MODULE__.Session
+  alias FileManager.Session
+  alias FileManager.Storage
+
+  defdelegate open_session, to: Session, as: :open
+  defdelegate current_working_directory(session), to: Session
+
+  def list_directory(session, path) do
+    with {:ok, cwd} <- current_working_directory(session) do
+      path
+      |> Path.expand(cwd)
+      |> Storage.list_directory()
+    end
+  end
 end

@@ -15,4 +15,8 @@ defmodule FileManagerTest do
   test "current_working_directory/0", %{session: session} do
     assert {:ok, "/"} = FileManager.current_working_directory(session)
   end
+
+  test "list_directory/2", %{session: session} do
+    assert {:ok, []} = FileManager.list_directory(session, "/")
+  end
 end
