@@ -5,4 +5,18 @@ defmodule FileManager.StorageTest do
 
   alias FileManager.Storage
   doctest Storage
+
+  describe "list_directory/1" do
+    test "empty directory" do
+      assert {:ok, []} = Storage.list_directory("/")
+    end
+
+    test "lists contents" do
+      :ok = Storage.make_directory("/foo/bar")
+      :ok = Storage.make_directory("/foo/baz")
+
+      assert {:ok, contents} = Storage.list_directory("/foo")
+      assert Enum.sort(contents) == ["bar", "baz"]
+    end
+  end
 end

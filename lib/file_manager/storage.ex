@@ -33,10 +33,27 @@ defmodule FileManager.Storage do
     end
   end
 
+  def handle_call({:list_directory, path}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(path),
+         {:ok, directory} <- get_directory(paths, root) do
+      {:reply, {:ok, Map.keys(directory.files)}, root}
+    else
+      {:error, _} = error -> {:reply, error, root}
+    end
+  end
+
   @impl GenServer
   def handle_cast({:reset}, _root) do
     {:noreply, %Directory{files: %{}}}
   end
+
+  defp get_directory([], directory), do: {:ok, directory}
+
+  defp get_directory([directory | paths], %Directory{files: files})
+       when is_map_key(files, directory),
+       do: get_directory(paths, Map.get(files, directory))
+
+  defp get_directory([_ | _], _directory), do: {:error, :invalid_path}
 
   defp split_absolute_path("/" <> path), do: {:ok, Path.split(path)}
   defp split_absolute_path(_path), do: {:error, :invalid_path}
@@ -82,9 +99,7 @@ defmodule FileManager.Storage do
       iex> Storage.exists?("/foo")
       {:error, :invalid_path}
   """
-  def exists?(path) do
-    GenServer.call(__MODULE__, {:exists?, path})
-  end
+  def exists?(path), do: GenServer.call(__MODULE__, {:exists?, path})
 
   @doc """
   Creates a directory at the given path.
@@ -98,9 +113,12 @@ defmodule FileManager.Storage do
       iex> Storage.make_directory("/foo")
       {:error, :already_exists}
   """
-  def make_directory(path) do
-    GenServer.call(__MODULE__, {:make_directory, path})
-  end
+  def make_directory(path), do: GenServer.call(__MODULE__, {:make_directory, path})
+
+  @doc """
+  Lists the contents of a directory.
+  """
+  def list_directory(path), do: GenServer.call(__MODULE__, {:list_directory, path})
 
   @doc """
   Resets the storage to an empty state.
@@ -110,7 +128,5 @@ defmodule FileManager.Storage do
       iex> Storage.reset()
       :ok
   """
-  def reset() do
-    GenServer.cast(__MODULE__, {:reset})
-  end
+  def reset(), do: GenServer.cast(__MODULE__, {:reset})
 end

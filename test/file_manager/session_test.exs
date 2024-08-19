@@ -7,6 +7,11 @@ defmodule FileManager.SessionTest do
   alias FileManager.Storage
   doctest Session
 
+  setup do
+    {:ok, session} = Session.open()
+    [session: session]
+  end
+
   describe "close/1" do
     test "invalid session" do
       assert {:error, :invalid_session} = Session.close(make_ref())
@@ -20,11 +25,6 @@ defmodule FileManager.SessionTest do
   end
 
   describe "change_directory/2" do
-    setup do
-      {:ok, session} = Session.open()
-      [session: session]
-    end
-
     test "root directory", %{session: session} do
       assert {:ok, "/"} = Session.change_directory(session, "/")
     end
