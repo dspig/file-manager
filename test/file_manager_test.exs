@@ -11,7 +11,7 @@ defmodule FileManagerTest do
 
   describe "current_working_directory/0" do
     setup %{session: session} do
-      FileManager.make_directory(session, "/foo/bar")
+      FileManager.make_directory(session, "/usr/local")
     end
 
     test "defaults to /", %{session: session} do
@@ -19,14 +19,14 @@ defmodule FileManagerTest do
     end
 
     test "after changing directory", %{session: session} do
-      assert {:ok, _directory} = FileManager.change_directory(session, "/foo/bar")
-      assert {:ok, "/foo/bar"} = FileManager.current_working_directory(session)
+      assert {:ok, _directory} = FileManager.change_directory(session, "/usr/local")
+      assert {:ok, "/usr/local"} = FileManager.current_working_directory(session)
     end
   end
 
   describe "change_directory/2" do
     setup %{session: session} do
-      FileManager.make_directory(session, "/foo/bar/baz")
+      FileManager.make_directory(session, "/usr/local/bin")
     end
 
     test "root directory", %{session: session} do
@@ -40,38 +40,59 @@ defmodule FileManagerTest do
     end
 
     test "nested directories", %{session: session} do
-      assert {:ok, "/foo"} = FileManager.change_directory(session, "foo"), "relative to cwd"
-      assert {:ok, "/foo/bar"} = FileManager.change_directory(session, "bar"), "relative to cwd"
+      assert {:ok, "/usr"} = FileManager.change_directory(session, "usr"), "relative to cwd"
 
-      assert {:ok, "/foo"} = FileManager.change_directory(session, "./.."),
+      assert {:ok, "/usr/local"} = FileManager.change_directory(session, "local"),
+             "relative to cwd"
+
+      assert {:ok, "/usr"} = FileManager.change_directory(session, "./.."),
              "resolves current and parent directory"
     end
 
     test "absolute paths", %{session: session} do
-      assert {:ok, "/foo/bar/baz"} = FileManager.change_directory(session, "/foo/bar/baz")
+      assert {:ok, "/usr/local/bin"} = FileManager.change_directory(session, "/usr/local/bin")
     end
 
     test "invalid paths", %{session: session} do
       assert {:error, :invalid_path} = FileManager.change_directory(session, "bix")
 
-      assert {:ok, "/foo/bar/baz"} = FileManager.change_directory(session, "/foo/bar/baz"),
+      assert {:ok, "/usr/local/bin"} = FileManager.change_directory(session, "/usr/local/bin"),
              "absolute paths"
 
       assert {:error, :invalid_path} = FileManager.change_directory(session, "bix")
+    end
+
+    test "change directory to a file", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/biz")
+      assert {:error, :invalid_path} = FileManager.change_directory(session, "/biz")
     end
   end
 
   describe "make_directory/2" do
     test "nested directories", %{session: session} do
-      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
-      assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, ["bin"]} = FileManager.list_directory(session, "/usr/local")
     end
 
-    test "already exists", %{session: session} do
-      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
-      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo/bar/baz")
-      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo/bar")
-      assert {:error, :already_exists} = FileManager.make_directory(session, "/foo")
+    test "directory already exists", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/usr/local")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/usr")
+    end
+
+    test "already exists as a file", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr/local")
+      assert {:error, :already_exists} = FileManager.make_directory(session, "/usr/local")
+    end
+
+    test "empty directory name", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.make_directory(session, "")
+
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_path} = FileManager.make_directory(session, "")
     end
   end
 
@@ -79,33 +100,39 @@ defmodule FileManagerTest do
     test "list contents", %{session: session} do
       assert {:ok, []} = FileManager.list_directory(session, "/")
 
-      assert :ok = FileManager.make_directory(session, "/foo")
-      assert :ok = FileManager.make_directory(session, "/bar")
+      assert :ok = FileManager.make_directory(session, "/usr")
+      assert :ok = FileManager.make_directory(session, "/etc")
+      assert :ok = FileManager.create_file(session, "/bin")
       assert {:ok, contents} = FileManager.list_directory(session, "/")
-      assert Enum.sort(contents) == ["bar", "foo"]
+      assert Enum.sort(contents) == ["bin", "etc", "usr"]
     end
 
     test "absolute paths", %{session: session} do
-      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
 
-      assert {:ok, ["foo"]} = FileManager.list_directory(session, "/")
-      assert {:ok, ["bar"]} = FileManager.list_directory(session, "/foo")
-      assert {:ok, ["baz"]} = FileManager.list_directory(session, "/foo/bar")
-      assert {:ok, []} = FileManager.list_directory(session, "/foo/bar/baz")
+      assert {:ok, ["usr"]} = FileManager.list_directory(session, "/")
+      assert {:ok, ["local"]} = FileManager.list_directory(session, "/usr")
+      assert {:ok, ["bin"]} = FileManager.list_directory(session, "/usr/local")
+      assert {:ok, []} = FileManager.list_directory(session, "/usr/local/bin")
     end
 
     test "current working directory", %{session: session} do
       assert {:ok, []} = FileManager.list_directory(session)
 
-      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
-      assert {:ok, ["foo"]} = FileManager.list_directory(session)
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, ["usr"]} = FileManager.list_directory(session)
 
-      assert {:ok, _cwd} = FileManager.change_directory(session, "foo")
-      assert {:ok, ["bar"]} = FileManager.list_directory(session)
+      assert {:ok, _cwd} = FileManager.change_directory(session, "usr")
+      assert {:ok, ["local"]} = FileManager.list_directory(session)
     end
 
     test "non-existent directory", %{session: session} do
-      assert {:error, :invalid_path} = FileManager.list_directory(session, "/foo")
+      assert {:error, :invalid_path} = FileManager.list_directory(session, "/usr")
+    end
+
+    test "listing a file", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr")
+      assert {:error, :invalid_path} = FileManager.list_directory(session, "/usr")
     end
   end
 
@@ -115,21 +142,65 @@ defmodule FileManagerTest do
     end
 
     test "deleting current working directory", %{session: session} do
-      assert :ok = FileManager.make_directory(session, "/foo")
-      assert {:ok, _cwd} = FileManager.change_directory(session, "/foo")
+      assert :ok = FileManager.make_directory(session, "/usr")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr")
       assert {:error, :invalid_path} = FileManager.delete_directory(session, ".")
       assert {:error, :invalid_path} = FileManager.delete_directory(session, "..")
       assert {:error, :invalid_path} = FileManager.delete_directory(session, "../foo")
     end
 
     test "deleting parent of current working directory", %{session: session} do
-      assert :ok = FileManager.make_directory(session, "/foo/bar/baz")
-      assert {:ok, _cwd} = FileManager.change_directory(session, "/foo/bar/baz")
-      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/foo/bar")
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/usr/local")
     end
 
     test "deleting a non-existent directory", %{session: session} do
-      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/foo")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/usr")
+    end
+
+    test "deleting a sub-tree", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert :ok = FileManager.delete_directory(session, "/usr")
+      assert {:ok, []} = FileManager.list_directory(session, "/")
+      assert {:error, :invalid_path} = FileManager.list_directory(session, "/usr/local")
+    end
+
+    test "deleting a file", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr")
+      assert {:error, :invalid_path} = FileManager.delete_directory(session, "/usr")
+    end
+  end
+
+  describe "create_file/2" do
+    test "empty file_name, root directory", %{session: session} do
+      assert {:error, :invalid_file_name} = FileManager.create_file(session, "")
+    end
+
+    test "empty file_name, nested directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_file_name} = FileManager.create_file(session, "")
+    end
+
+    test "relative paths", %{session: session} do
+      assert :ok = FileManager.create_file(session, "usr")
+      assert {:ok, ["usr"]} = FileManager.list_directory(session)
+
+      assert :ok = FileManager.create_file(session, "etc/passwd")
+      assert {:ok, ["passwd"]} = FileManager.list_directory(session, "/etc")
+    end
+
+    test "create nested directories", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr/local/lib/foo")
+      assert {:ok, ["lib"]} = FileManager.list_directory(session, "/usr/local")
+      assert {:ok, ["foo"]} = FileManager.list_directory(session, "/usr/local/lib")
+    end
+
+    test "part of the path is not a directory", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr")
+      assert {:error, :invalid_path} = FileManager.create_file(session, "/usr/bin")
     end
   end
 end

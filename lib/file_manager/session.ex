@@ -47,7 +47,7 @@ defmodule FileManager.Session do
   def handle_call({:change_directory, id, path}, _from, sessions) do
     with {:ok, session} <- get_session(sessions, id),
          cwd = build_cwd(session.current_working_directory, path),
-         :ok <- Storage.exists?(cwd) do
+         :ok <- Storage.exists?(cwd, :directory) do
       new_session = %{session | current_working_directory: cwd}
 
       {:reply, {:ok, new_session.current_working_directory}, Map.put(sessions, id, new_session)}

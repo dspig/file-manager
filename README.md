@@ -67,3 +67,8 @@ implementation. The following are some explanations.
   of making all tests synchronous. Given more time, I would probably try to
   implement something similar to Ecto sandboxes, enabling each test to run
   independently from other tests.
+- **Use of CQRS** I'm tempted to breakout the commands (e.g. create_file,
+  write_file, create_directory, etc.) into separate modules because otherwise
+  the FileManager module becomes a little bit unwieldy. Punting on that
+  additional complexity until I can figure out if there's function refactoring I
+  can do to share logic between the commands.

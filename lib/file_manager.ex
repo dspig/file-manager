@@ -40,10 +40,8 @@ defmodule FileManager do
   defdelegate current_working_directory(session), to: Session
 
   def list_directory(session, path \\ ".") do
-    with {:ok, cwd} <- current_working_directory(session) do
-      path
-      |> Path.expand(cwd)
-      |> Storage.list_directory()
+    with {:ok, path} <- expand_path(session, path) do
+      Storage.list_directory(path)
     end
   end
 
@@ -62,11 +60,11 @@ defmodule FileManager do
     {:error, :already_exists}
   """
 
+  def make_directory(_session, ""), do: {:error, :invalid_path}
+
   def make_directory(session, path) do
-    with {:ok, cwd} <- current_working_directory(session) do
-      path
-      |> Path.expand(cwd)
-      |> Storage.make_directory()
+    with {:ok, path} <- expand_path(session, path) do
+      Storage.make_directory(path)
     end
   end
 
@@ -91,7 +89,7 @@ defmodule FileManager do
 
   @doc """
   Delete a directory with the given path, including nested directories and
-  files. An error is thrown if the target directory is a parent of the current
+  files. An error is returned if the target directory is a parent of the current
   working directory.
 
   ## Examples
@@ -111,6 +109,23 @@ defmodule FileManager do
       else
         Storage.delete_directory(path)
       end
+    end
+  end
+
+  @doc """
+  Create a file with the given path. Intermediate directories are created, if
+  necessary. If the file already exists, an error is returned.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.create_file(session, "/foo/bar/baz")
+    :ok
+  """
+  def create_file(_session, ""), do: {:error, :invalid_file_name}
+
+  def create_file(session, file_name) do
+    with {:ok, file_name} <- expand_path(session, file_name) do
+      Storage.create_file(file_name)
     end
   end
 
