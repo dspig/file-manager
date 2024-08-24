@@ -306,4 +306,17 @@ defmodule FileManagerTest do
       assert {:error, :invalid_path} = FileManager.move(session, "bin", "")
     end
   end
+
+  test "changes persist across different sessions", %{session: session} do
+    assert {:ok, other_session} = FileManager.open_session()
+
+    # pre-condition
+    assert {:ok, []} = FileManager.list_directory(other_session, "/")
+
+    # arrange
+    assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+
+    assert {:ok, ["usr"]} = FileManager.list_directory(other_session, "/")
+    assert {:ok, ["bin"]} = FileManager.list_directory(other_session, "/usr/local")
+  end
 end

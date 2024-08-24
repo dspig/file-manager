@@ -65,5 +65,9 @@ defmodule FileManager.SessionTest do
     test "invalid session" do
       assert {:error, :invalid_session} = Session.change_directory(make_ref(), "/foo/bar")
     end
+
+    test "invalid directory", %{session: session} do
+      assert {:error, :invalid_path} = Session.change_directory(session, "/foo/bar")
+    end
   end
 end

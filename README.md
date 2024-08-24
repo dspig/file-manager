@@ -86,3 +86,12 @@ implementation. The following are some explanations.
 - [x] read file
 - [x] move file/directory
 - [ ] find file
+
+### Extensions
+
+- [ ] Move and copy
+- [ ] Operations on paths
+- [ ] Walk a subtree
+- [ ] Symlinks and hardlinks
+- [ ] Permission and multiple users
+- [ ] Stream for file contents
