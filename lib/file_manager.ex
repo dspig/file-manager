@@ -121,11 +121,29 @@ defmodule FileManager do
     iex> FileManager.create_file(session, "/foo/bar/baz")
     :ok
   """
-  def create_file(_session, ""), do: {:error, :invalid_file_name}
+  def create_file(_session, ""), do: {:error, :invalid_path}
 
   def create_file(session, file_name) do
     with {:ok, file_name} <- expand_path(session, file_name) do
       Storage.create_file(file_name)
+    end
+  end
+
+  @doc """
+  Write contents to a file with the given path.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.create_file(session, "/foo/bar/baz")
+    iex> FileManager.write_file(session, "/foo/bar/baz", "Hello, world!")
+    :ok
+  """
+  def write_file(_session, "" = _filename, _contents),
+    do: {:error, :invalid_path}
+
+  def write_file(session, file_name, contents) do
+    with {:ok, file_name} <- expand_path(session, file_name) do
+      Storage.write_file(file_name, contents)
     end
   end
 

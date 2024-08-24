@@ -61,6 +61,15 @@ defmodule FileManager.Storage do
     end
   end
 
+  def handle_call({:write_file, file_name, contents}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(file_name),
+         {:ok, root} <- do_write_file(paths, root, contents) do
+      {:reply, :ok, root}
+    else
+      {:error, _} = error -> {:reply, error, root}
+    end
+  end
+
   @impl GenServer
   def handle_cast({:reset}, _root) do
     {:noreply, %Directory{files: %{}}}
@@ -144,6 +153,18 @@ defmodule FileManager.Storage do
 
   defp do_create_file(_directories, _parent), do: {:error, :invalid_path}
 
+  defp do_write_file([], %File{} = file, contents),
+    do: {:ok, Map.update(file, :contents, contents, &(&1 <> contents))}
+
+  defp do_write_file([path | paths], %Directory{files: files} = parent, contents)
+       when is_map_key(files, path) do
+    with {:ok, child} <- do_write_file(paths, Map.get(files, path), contents) do
+      {:ok, %{parent | files: Map.put(files, path, child)}}
+    end
+  end
+
+  defp do_write_file(_paths, _parent, _contents), do: {:error, :invalid_path}
+
   @doc """
   Checks if a path exists or not.
 
@@ -176,6 +197,12 @@ defmodule FileManager.Storage do
   Creates a file at the given path.
   """
   def create_file(file_name), do: GenServer.call(__MODULE__, {:create_file, file_name})
+
+  @doc """
+  Writes contents to a file at the given path.
+  """
+  def write_file(file_name, contents),
+    do: GenServer.call(__MODULE__, {:write_file, file_name, contents})
 
   @doc """
   Resets the storage to an empty state.

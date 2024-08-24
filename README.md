@@ -72,3 +72,17 @@ implementation. The following are some explanations.
   the FileManager module becomes a little bit unwieldy. Punting on that
   additional complexity until I can figure out if there's function refactoring I
   can do to share logic between the commands.
+
+
+## Implementation
+
+- [x] change directory
+- [x] current working directory
+- [x] make directory
+- [x] list directory
+- [x] remove directory
+- [x] create file
+- [x] write file
+- [ ] read file
+- [ ] rename file
+- [ ] find file

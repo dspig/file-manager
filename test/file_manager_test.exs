@@ -174,14 +174,14 @@ defmodule FileManagerTest do
 
   describe "create_file/2" do
     test "empty file_name, root directory", %{session: session} do
-      assert {:error, :invalid_file_name} = FileManager.create_file(session, "")
+      assert {:error, :invalid_path} = FileManager.create_file(session, "")
     end
 
     test "empty file_name, nested directory", %{session: session} do
       assert :ok = FileManager.make_directory(session, "/usr/local/bin")
       assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
 
-      assert {:error, :invalid_file_name} = FileManager.create_file(session, "")
+      assert {:error, :invalid_path} = FileManager.create_file(session, "")
     end
 
     test "relative paths", %{session: session} do
@@ -201,6 +201,39 @@ defmodule FileManagerTest do
     test "part of the path is not a directory", %{session: session} do
       assert :ok = FileManager.create_file(session, "/usr")
       assert {:error, :invalid_path} = FileManager.create_file(session, "/usr/bin")
+    end
+  end
+
+  describe "write_file/3" do
+    test "empty file_name, root directory", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.write_file(session, "", "Hello, world!")
+    end
+
+    test "empty file_name, nested directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_path} = FileManager.write_file(session, "", "Hello, world!")
+    end
+
+    test "target is a directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_path} =
+               FileManager.write_file(session, "/usr/local/bin", "Hello, world!")
+    end
+
+    test "relative paths", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+      assert :ok = FileManager.create_file(session, "../tmp")
+      assert :ok = FileManager.write_file(session, "../tmp", "Hello, world!")
+    end
+
+    test "multiple writes", %{session: session} do
+      assert :ok = FileManager.create_file(session, "tmp")
+      assert :ok = FileManager.write_file(session, "tmp", "Hello, world!")
+      assert :ok = FileManager.write_file(session, "tmp", "Hola, mundo!")
     end
   end
 end

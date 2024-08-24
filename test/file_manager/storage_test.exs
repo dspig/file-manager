@@ -12,18 +12,18 @@ defmodule FileManager.StorageTest do
     end
 
     test "multiple entries" do
-      :ok = Storage.make_directory("/foo/bar")
-      :ok = Storage.make_directory("/foo/baz")
+      # arrange
+      assert :ok = Storage.make_directory("/foo/bar")
+      assert :ok = Storage.make_directory("/foo/baz")
 
       assert {:ok, contents} = Storage.list_directory("/foo")
       assert Enum.sort(contents) == ["bar", "baz"]
     end
   end
 
-  describe "delete_directory/" do
+  describe "delete_directory/1" do
     test "non-empty directory" do
-      :ok = Storage.make_directory("/foo/bar")
-
+      assert :ok = Storage.make_directory("/foo/bar")
       assert :ok = Storage.delete_directory("/foo")
     end
 
@@ -33,6 +33,27 @@ defmodule FileManager.StorageTest do
 
     test "root directory" do
       assert {:error, :invalid_path} = Storage.delete_directory("/")
+    end
+  end
+
+  describe "write_file/2" do
+    test "directory" do
+      # arrange
+      assert :ok = Storage.make_directory("/foo")
+
+      assert {:error, :invalid_path} = Storage.write_file("/foo", "contents")
+    end
+
+    test "non-existant file" do
+      assert {:error, :invalid_path} = Storage.write_file("/foo", "contents")
+    end
+
+    test "multiple writes" do
+      # arrange
+      assert :ok = Storage.create_file("/foo")
+
+      assert :ok = Storage.write_file("/foo", "contents")
+      assert :ok = Storage.write_file("/foo", "more contents")
     end
   end
 end
