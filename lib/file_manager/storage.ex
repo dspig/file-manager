@@ -18,15 +18,6 @@ defmodule FileManager.Storage do
   def init(_), do: {:ok, %Directory{files: %{}}}
 
   @impl GenServer
-  def handle_call({:exists?, type, path}, _from, root) do
-    with {:ok, paths} <- split_absolute_path(path),
-         :ok <- check_path_parts(paths, type, root) do
-      {:reply, :ok, root}
-    else
-      {:error, _} = error -> {:reply, error, root}
-    end
-  end
-
   def handle_call({:make_directory, path}, _from, root) do
     with {:ok, paths} <- split_absolute_path(path),
          {:ok, root} <- do_make_directory(paths, root) do
@@ -109,15 +100,6 @@ defmodule FileManager.Storage do
   defp split_absolute_path("/" <> path), do: {:ok, Path.split(path)}
   defp split_absolute_path(_path), do: {:error, :invalid_path}
 
-  defp check_path_parts([], :directory, %Directory{}), do: :ok
-  defp check_path_parts([], :file, %File{}), do: :ok
-
-  defp check_path_parts([path | paths], type, %Directory{files: files})
-       when is_child(files, path),
-       do: check_path_parts(paths, type, Map.get(files, path))
-
-  defp check_path_parts(_paths, _type, _directory), do: {:error, :invalid_path}
-
   defp do_make_directory([directory], %Directory{files: files} = parent)
        when not is_child(files, directory),
        do: {:ok, %{parent | files: Map.put(files, directory, %Directory{})}}
@@ -171,16 +153,8 @@ defmodule FileManager.Storage do
        when not is_child(files, path),
        do: {:ok, %{parent | files: Map.put(files, path, target)}}
 
-  defp do_move([path | paths], target, %Directory{files: files} = parent)
-       when is_child(files, path) do
-    with {:ok, child} <- do_move(paths, target, Map.get(files, path)) do
-      {:ok, %{parent | files: Map.put(files, path, child)}}
-    end
-  end
-
-  defp do_move([path | paths], target, %Directory{files: files} = parent)
-       when not is_child(files, path) do
-    with {:ok, child} <- do_move(paths, target, %Directory{}) do
+  defp do_move([path | paths], target, %Directory{files: files} = parent) do
+    with {:ok, child} <- do_move(paths, target, Map.get(files, path, %Directory{})) do
       {:ok, %{parent | files: Map.put(files, path, child)}}
     end
   end
@@ -222,19 +196,6 @@ defmodule FileManager.Storage do
        do: do_read_file(paths, Map.get(files, directory))
 
   defp do_read_file(_paths, _parent), do: {:error, :invalid_path}
-
-  @doc """
-  Checks if a path exists or not.
-
-  ## Examples
-
-      iex> Storage.exists?("/", :directory)
-      :ok
-      iex> Storage.exists?("/foo", :directory)
-      {:error, :invalid_path}
-  """
-  def exists?(path, type) when type in [:directory, :file],
-    do: GenServer.call(__MODULE__, {:exists?, type, path})
 
   @doc """
   Creates a directory at the given path.
