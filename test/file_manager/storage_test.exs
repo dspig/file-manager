@@ -56,4 +56,26 @@ defmodule FileManager.StorageTest do
       assert :ok = Storage.write_file("/foo", "more contents")
     end
   end
+
+  describe "read_file/1" do
+    test "directory" do
+      # arrange
+      assert :ok = Storage.make_directory("/foo")
+
+      assert {:error, :invalid_path} = Storage.read_file("/foo")
+    end
+
+    test "non-existant file" do
+      assert {:error, :invalid_path} = Storage.read_file("/foo")
+    end
+
+    test "multiple writes" do
+      # arrange
+      assert :ok = Storage.create_file("/foo")
+      assert :ok = Storage.write_file("/foo", "contents")
+      assert :ok = Storage.write_file("/foo", "\nmore contents")
+
+      assert {:ok, "contents\nmore contents"} = Storage.read_file("/foo")
+    end
+  end
 end

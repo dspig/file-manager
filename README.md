@@ -83,6 +83,6 @@ implementation. The following are some explanations.
 - [x] remove directory
 - [x] create file
 - [x] write file
-- [ ] read file
+- [x] read file
 - [ ] rename file
 - [ ] find file

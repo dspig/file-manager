@@ -236,4 +236,58 @@ defmodule FileManagerTest do
       assert :ok = FileManager.write_file(session, "tmp", "Hola, mundo!")
     end
   end
+
+  describe "read_file/2" do
+    test "empty file_name, root directory", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.read_file(session, "")
+    end
+
+    test "empty file_name, nested directory", %{session: session} do
+      # arrange
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_path} = FileManager.read_file(session, "")
+    end
+
+    test "target is a directory", %{session: session} do
+      # arrange
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+
+      assert {:error, :invalid_path} =
+               FileManager.read_file(session, "/usr/local/bin")
+    end
+
+    test "relative paths", %{session: session} do
+      # arrange
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local/bin")
+      assert :ok = FileManager.create_file(session, "../tmp")
+      assert :ok = FileManager.write_file(session, "../tmp", "Hello, world!")
+
+      assert {:ok, "Hello, world!"} = FileManager.read_file(session, "../tmp")
+    end
+
+    test "multiple writes", %{session: session} do
+      # arrange
+      assert :ok = FileManager.create_file(session, "tmp")
+      assert :ok = FileManager.write_file(session, "tmp", "Hello, world!")
+      assert :ok = FileManager.write_file(session, "tmp", "Hola, mundo!")
+
+      assert {:ok, "Hello, world!Hola, mundo!"} = FileManager.read_file(session, "tmp")
+    end
+
+    test "multi-line write", %{session: session} do
+      # arrange
+      assert :ok = FileManager.create_file(session, "tmp")
+
+      assert :ok =
+               FileManager.write_file(session, "tmp", """
+               Hello, world!
+               Hola, mundo!\
+               """)
+
+      assert {:ok, "Hello, world!\nHola, mundo!"} = FileManager.read_file(session, "tmp")
+    end
+  end
 end

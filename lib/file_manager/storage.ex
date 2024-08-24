@@ -52,8 +52,8 @@ defmodule FileManager.Storage do
     end
   end
 
-  def handle_call({:create_file, file_name}, _from, root) do
-    with {:ok, paths} <- split_absolute_path(file_name),
+  def handle_call({:create_file, path}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(path),
          {:ok, root} <- do_create_file(paths, root) do
       {:reply, :ok, root}
     else
@@ -61,10 +61,19 @@ defmodule FileManager.Storage do
     end
   end
 
-  def handle_call({:write_file, file_name, contents}, _from, root) do
-    with {:ok, paths} <- split_absolute_path(file_name),
+  def handle_call({:write_file, path, contents}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(path),
          {:ok, root} <- do_write_file(paths, root, contents) do
       {:reply, :ok, root}
+    else
+      {:error, _} = error -> {:reply, error, root}
+    end
+  end
+
+  def handle_call({:read_file, path}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(path),
+         {:ok, contents} <- do_read_file(paths, root) do
+      {:reply, {:ok, contents}, root}
     else
       {:error, _} = error -> {:reply, error, root}
     end
@@ -137,12 +146,12 @@ defmodule FileManager.Storage do
 
   defp do_delete_directory(_directories, _parent), do: {:error, :invalid_path}
 
-  defp do_create_file([file_name], %Directory{files: files} = parent)
-       when not is_map_key(files, file_name),
-       do: {:ok, %{parent | files: Map.put(files, file_name, %File{})}}
+  defp do_create_file([filename], %Directory{files: files} = parent)
+       when not is_map_key(files, filename),
+       do: {:ok, %{parent | files: Map.put(files, filename, %File{})}}
 
-  defp do_create_file([file_name], %Directory{files: files})
-       when is_map_key(files, file_name),
+  defp do_create_file([filename], %Directory{files: files})
+       when is_map_key(files, filename),
        do: {:error, :already_exists}
 
   defp do_create_file([directory | paths], %Directory{files: files} = parent) do
@@ -164,6 +173,14 @@ defmodule FileManager.Storage do
   end
 
   defp do_write_file(_paths, _parent, _contents), do: {:error, :invalid_path}
+
+  defp do_read_file([], %File{contents: contents}), do: {:ok, contents}
+
+  defp do_read_file([directory | paths], %Directory{files: files})
+       when is_map_key(files, directory),
+       do: do_read_file(paths, Map.get(files, directory))
+
+  defp do_read_file(_paths, _parent), do: {:error, :invalid_path}
 
   @doc """
   Checks if a path exists or not.
@@ -196,13 +213,16 @@ defmodule FileManager.Storage do
   @doc """
   Creates a file at the given path.
   """
-  def create_file(file_name), do: GenServer.call(__MODULE__, {:create_file, file_name})
+  def create_file(path), do: GenServer.call(__MODULE__, {:create_file, path})
 
   @doc """
   Writes contents to a file at the given path.
   """
-  def write_file(file_name, contents),
-    do: GenServer.call(__MODULE__, {:write_file, file_name, contents})
+  def write_file(path, contents),
+    do: GenServer.call(__MODULE__, {:write_file, path, contents})
+
+  def read_file(path),
+    do: GenServer.call(__MODULE__, {:read_file, path})
 
   @doc """
   Resets the storage to an empty state.
