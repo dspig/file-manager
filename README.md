@@ -84,5 +84,5 @@ implementation. The following are some explanations.
 - [x] create file
 - [x] write file
 - [x] read file
-- [ ] rename file
+- [x] move file/directory
 - [ ] find file

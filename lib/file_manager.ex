@@ -164,6 +164,27 @@ defmodule FileManager do
     end
   end
 
+  @doc """
+  Move a file or directory, creating intermediate directories as needed.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.create_file(session, "/foo/bar")
+    iex> FileManager.move(session, "/foo/bar", "/biz/baz")
+    :ok
+    iex> FileManager.list_directory(session, "/biz")
+    {:ok, ["baz"]}
+  """
+  def move(_session, "" = _from_path, _to_path), do: {:error, :invalid_path}
+  def move(_session, _from_path, "" = _to_path), do: {:error, :invalid_path}
+
+  def move(session, from_path, to_path) do
+    with {:ok, from_path} <- expand_path(session, from_path),
+         {:ok, to_path} <- expand_path(session, to_path) do
+      Storage.move(from_path, to_path)
+    end
+  end
+
   defp expand_path(session, path) do
     with {:ok, cwd} <- current_working_directory(session) do
       {:ok, Path.expand(path, cwd)}

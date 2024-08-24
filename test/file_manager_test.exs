@@ -290,4 +290,20 @@ defmodule FileManagerTest do
       assert {:ok, "Hello, world!\nHola, mundo!"} = FileManager.read_file(session, "tmp")
     end
   end
+
+  describe "move/3" do
+    test "empty file_name, root directory", %{session: session} do
+      assert {:error, :invalid_path} = FileManager.move(session, "", "/foo")
+      assert {:error, :invalid_path} = FileManager.move(session, "/foo", "")
+    end
+
+    test "empty file_name, nested directory", %{session: session} do
+      # arrange
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, _cwd} = FileManager.change_directory(session, "/usr/local")
+
+      assert {:error, :invalid_path} = FileManager.move(session, "", "bin")
+      assert {:error, :invalid_path} = FileManager.move(session, "bin", "")
+    end
+  end
 end

@@ -7,6 +7,8 @@ defmodule FileManager.Storage do
   alias FileManager.Storage.Directory
   alias FileManager.Storage.File
 
+  defguard is_child(files, file) when is_map_key(files, file)
+
   @doc false
   def start_link(state) do
     GenServer.start_link(__MODULE__, state, name: __MODULE__)
@@ -45,7 +47,7 @@ defmodule FileManager.Storage do
 
   def handle_call({:delete_directory, path}, _from, root) do
     with {:ok, paths} <- split_absolute_path(path),
-         {:ok, root} <- do_delete_directory(paths, root) do
+         {:ok, _target, root} <- do_delete_directory(paths, root) do
       {:reply, :ok, root}
     else
       {:error, _} = error -> {:reply, error, root}
@@ -79,6 +81,17 @@ defmodule FileManager.Storage do
     end
   end
 
+  def handle_call({:move, from, to}, _from, root) do
+    with {:ok, from} <- split_absolute_path(from),
+         {:ok, target, root} <- do_delete(from, root),
+         {:ok, to} <- split_absolute_path(to),
+         {:ok, root} <- do_move(to, target, root) do
+      {:reply, :ok, root}
+    else
+      {:error, _} = error -> {:reply, error, root}
+    end
+  end
+
   @impl GenServer
   def handle_cast({:reset}, _root) do
     {:noreply, %Directory{files: %{}}}
@@ -87,7 +100,7 @@ defmodule FileManager.Storage do
   defp get_directory([], %Directory{} = directory), do: {:ok, directory}
 
   defp get_directory([directory | paths], %Directory{files: files})
-       when is_map_key(files, directory),
+       when is_child(files, directory),
        do: get_directory(paths, Map.get(files, directory))
 
   defp get_directory([_ | _], _directory), do: {:error, :invalid_path}
@@ -100,21 +113,21 @@ defmodule FileManager.Storage do
   defp check_path_parts([], :file, %File{}), do: :ok
 
   defp check_path_parts([path | paths], type, %Directory{files: files})
-       when is_map_key(files, path),
+       when is_child(files, path),
        do: check_path_parts(paths, type, Map.get(files, path))
 
   defp check_path_parts(_paths, _type, _directory), do: {:error, :invalid_path}
 
   defp do_make_directory([directory], %Directory{files: files} = parent)
-       when not is_map_key(files, directory),
+       when not is_child(files, directory),
        do: {:ok, %{parent | files: Map.put(files, directory, %Directory{})}}
 
   defp do_make_directory([directory], %Directory{files: files})
-       when is_map_key(files, directory),
+       when is_child(files, directory),
        do: {:error, :already_exists}
 
   defp do_make_directory([directory | directories], %Directory{files: files} = parent)
-       when is_map_key(files, directory) do
+       when is_child(files, directory) do
     with {:ok, child} <- do_make_directory(directories, Map.get(files, directory)) do
       {:ok, %{parent | files: Map.put(files, directory, child)}}
     end
@@ -128,30 +141,58 @@ defmodule FileManager.Storage do
 
   defp do_make_directory(_directories, _parent), do: {:error, :invalid_path}
 
-  defp do_delete_directory([directory], %Directory{files: files} = parent)
-       when is_map_key(files, directory) do
-    if match?(%Directory{}, Map.get(files, directory)) do
-      {:ok, %{parent | files: Map.delete(parent.files, directory)}}
-    else
-      {:error, :invalid_path}
+  defp do_delete_directory(directories, %Directory{} = parent) do
+    directories
+    |> do_delete(parent)
+    |> case do
+      {:ok, %Directory{} = target, root} -> {:ok, target, root}
+      _ -> {:error, :invalid_path}
     end
   end
 
-  defp do_delete_directory([directory | directories], %Directory{files: files} = parent)
-       when is_map_key(files, directory) do
-    with {:ok, child} <- do_delete_directory(directories, Map.get(files, directory)) do
-      {:ok, %{parent | files: Map.put(files, directory, child)}}
+  defp do_delete([target], %Directory{files: files} = parent) do
+    files
+    |> Map.pop(target)
+    |> case do
+      {nil, _} -> {:error, :invalid_path}
+      {file, files} -> {:ok, file, %{parent | files: files}}
     end
   end
 
-  defp do_delete_directory(_directories, _parent), do: {:error, :invalid_path}
+  defp do_delete([directory | paths], %Directory{files: files} = parent) do
+    with {:ok, target, child} <- do_delete(paths, Map.get(files, directory)) do
+      {:ok, target, %{parent | files: Map.put(files, directory, child)}}
+    end
+  end
+
+  defp do_delete(_directories, _parent), do: {:error, :invalid_path}
+
+  defp do_move([path], target, %Directory{files: files} = parent)
+       when not is_child(files, path),
+       do: {:ok, %{parent | files: Map.put(files, path, target)}}
+
+  defp do_move([path | paths], target, %Directory{files: files} = parent)
+       when is_child(files, path) do
+    with {:ok, child} <- do_move(paths, target, Map.get(files, path)) do
+      {:ok, %{parent | files: Map.put(files, path, child)}}
+    end
+  end
+
+  defp do_move([path | paths], target, %Directory{files: files} = parent)
+       when not is_child(files, path) do
+    with {:ok, child} <- do_move(paths, target, %Directory{}) do
+      {:ok, %{parent | files: Map.put(files, path, child)}}
+    end
+  end
+
+  defp do_move(_paths, _target, _parent), do: {:error, :invalid_path}
 
   defp do_create_file([filename], %Directory{files: files} = parent)
-       when not is_map_key(files, filename),
+       when not is_child(files, filename),
        do: {:ok, %{parent | files: Map.put(files, filename, %File{})}}
 
   defp do_create_file([filename], %Directory{files: files})
-       when is_map_key(files, filename),
+       when is_child(files, filename),
        do: {:error, :already_exists}
 
   defp do_create_file([directory | paths], %Directory{files: files} = parent) do
@@ -166,7 +207,7 @@ defmodule FileManager.Storage do
     do: {:ok, Map.update(file, :contents, contents, &(&1 <> contents))}
 
   defp do_write_file([path | paths], %Directory{files: files} = parent, contents)
-       when is_map_key(files, path) do
+       when is_child(files, path) do
     with {:ok, child} <- do_write_file(paths, Map.get(files, path), contents) do
       {:ok, %{parent | files: Map.put(files, path, child)}}
     end
@@ -177,7 +218,7 @@ defmodule FileManager.Storage do
   defp do_read_file([], %File{contents: contents}), do: {:ok, contents}
 
   defp do_read_file([directory | paths], %Directory{files: files})
-       when is_map_key(files, directory),
+       when is_child(files, directory),
        do: do_read_file(paths, Map.get(files, directory))
 
   defp do_read_file(_paths, _parent), do: {:error, :invalid_path}
@@ -221,8 +262,16 @@ defmodule FileManager.Storage do
   def write_file(path, contents),
     do: GenServer.call(__MODULE__, {:write_file, path, contents})
 
+  @doc """
+  Reads the contents of a file at the given path.
+  """
   def read_file(path),
     do: GenServer.call(__MODULE__, {:read_file, path})
+
+  @doc """
+  Moves a file or directory from one path to another.
+  """
+  def move(from, to), do: GenServer.call(__MODULE__, {:move, from, to})
 
   @doc """
   Resets the storage to an empty state.
