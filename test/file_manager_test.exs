@@ -319,6 +319,27 @@ defmodule FileManagerTest do
     end
   end
 
+  describe "find/1" do
+    test "default scope to current working directory", %{session: session} do
+      assert :ok = FileManager.make_directory(session, "/usr/local/bin")
+      assert {:ok, ["/usr/local"]} = FileManager.find(session, "local")
+      assert {:ok, ["/usr/local/bin"]} = FileManager.find(session, "bin")
+
+      assert {:ok, _dir} = FileManager.change_directory(session, "/usr")
+
+      assert {:ok, ["local"]} = FileManager.find(session, "local")
+      assert {:ok, ["local/bin"]} = FileManager.find(session, "bin")
+      assert {:ok, []} = FileManager.find(session, "usr")
+    end
+
+    test "path scope", %{session: session} do
+      assert :ok = FileManager.create_file(session, "/usr/local/bin")
+
+      assert {:ok, ["bin"]} = FileManager.find(session, "bin", "/usr/local")
+      assert {:ok, ["local/bin"]} = FileManager.find(session, "bin", "/usr")
+    end
+  end
+
   test "changes persist across different sessions", %{session: session} do
     assert {:ok, other_session} = FileManager.open_session()
 

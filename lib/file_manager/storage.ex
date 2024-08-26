@@ -83,6 +83,34 @@ defmodule FileManager.Storage do
     end
   end
 
+  def handle_call({:find, path, filename}, _from, root) do
+    with {:ok, paths} <- split_absolute_path(path),
+         {:ok, directory} <- get_directory(paths, root),
+         results when is_list(results) <- do_find_file(path, filename, directory) do
+      results = map_relative_paths(path, results)
+      {:reply, {:ok, results}, root}
+    else
+      {:error, _} = error -> {:reply, error, root}
+    end
+  end
+
+  defp map_relative_paths("/", results), do: results
+  defp map_relative_paths(path, results), do: Enum.map(results, &Path.relative_to(&1, path))
+
+  defp do_find_file(path, filename, %Directory{files: files})
+       when is_child(files, filename) do
+    [
+      Path.join(path, filename)
+      | Enum.flat_map(files, fn {k, v} -> path |> Path.join(k) |> do_find_file(filename, v) end)
+    ]
+  end
+
+  defp do_find_file(path, filename, %Directory{files: files}) do
+    Enum.flat_map(files, fn {k, v} -> path |> Path.join(k) |> do_find_file(filename, v) end)
+  end
+
+  defp do_find_file(_path, _filename, _directory), do: []
+
   @impl GenServer
   def handle_cast({:reset}, _root) do
     {:noreply, %Directory{files: %{}}}
@@ -233,6 +261,11 @@ defmodule FileManager.Storage do
   Moves a file or directory from one path to another.
   """
   def move(from, to), do: GenServer.call(__MODULE__, {:move, from, to})
+
+  @doc """
+  Finds a file or directory by name under the provided path
+  """
+  def find(path, filename), do: GenServer.call(__MODULE__, {:find, path, filename})
 
   @doc """
   Resets the storage to an empty state.

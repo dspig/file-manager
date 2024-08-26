@@ -185,6 +185,23 @@ defmodule FileManager do
     end
   end
 
+  @doc """
+  Fine a file or directory by name, optionally from a target path.
+
+  ## Examples
+    iex> {:ok, session} = FileManager.open_session()
+    iex> FileManager.create_file(session, "/foo/bar")
+    iex> FileManager.find(session, "bar")
+    {:ok, ["/foo/bar"]}
+    iex> FileManager.find(session, "bar", "/foo")
+    {:ok, ["bar"]}
+  """
+  def find(session, filename, path \\ ".") do
+    with {:ok, path} <- expand_path(session, path) do
+      Storage.find(path, filename)
+    end
+  end
+
   defp expand_path(session, path) do
     with {:ok, cwd} <- current_working_directory(session) do
       {:ok, Path.expand(path, cwd)}
